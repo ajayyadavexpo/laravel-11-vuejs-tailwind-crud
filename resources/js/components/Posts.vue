@@ -11,6 +11,10 @@
             <div class="mb-4">
                 <textarea placeholder="Content" v-model="form.content" class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring focus:ring-indigo-300"></textarea>
             </div>
+
+            <input type="file" @change="handleFileUpload"
+                ref="imagefile"
+                class="w-full p-2" />
             
             <button type="submit" class="bg-indigo-500 text-white px-4 py-2 rounded-md hover:bg-indigo-600">{{ editMode ? 'Update' : 'Create' }}</button>
 
@@ -21,9 +25,13 @@
             <h3 class="text-xl font-semibold">{{  post.title }}</h3>
             <p class="text-gray-700">{{  post.content }}</p>
 
+            <img v-if="post.image" :src="'/storage/'+post.image" class="w-60 h-40 object-cover rounded-lg shadow-md" />
+
+
             <button type="button" class="bg-yellow-500 text-white px-4 py-2 rounded-md hover:bg-yellow-600 mt-3" @click="editPost(post)">Edit</button>
 
             <button type="button" class="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 mt-3 ml-3" @click="deletePost(post.id)">Delete</button>
+
         </div>
 
 
@@ -57,28 +65,51 @@ export default{
             posts: {},
             form: {
                 title : '',
-                content: ''
+                content: '',
+                image: null
             },
             editMode:false,
             editId:null
         }
     },
     methods:{
+        handleFileUpload(event){
+            this.form.image = event.target.files[0];
+        },
         async fetchPosts(url="/api/posts"){
             const {data} = await axios.get(url);
             this.posts = data;
         },
         async savePost(){
+            const formData = new FormData();
+            formData.append('title', this.form.title);
+            formData.append('content', this.form.content);
+            
+            if(this.form.image){
+                formData.append('image', this.form.image);                
+            }
             if(this.editMode){
-                await axios.put(`/api/posts/${this.editId}`,this.form);
+                formData.append('_method','PUT');
+                await axios.post(`/api/posts/${this.editId}`,formData,{
+                    headers:{
+                        "Content-Type": "multipart/form-data"
+                    }
+                });
                 this.editMode = false;
             }else{
-                await axios.post('/api/posts',this.form);
+                await axios.post('/api/posts',formData,{
+                    headers:{
+                        "Content-Type": "multipart/form-data"
+                    }
+                });
             }
             this.form = {
                 title : '',
                 content : '',
+                image: null
             }
+            this.$refs.imagefile.value = null; 
+            
             this.fetchPosts();
         },
         editPost(post){
