@@ -30,8 +30,13 @@ class PostController extends Controller
     {
         $validated = $request->validate([
             'title'=>'required|string|max:255',
-            'content' => 'required|string'
+            'content' => 'required|string',
+            'image' => 'nullable|image|max:2048'
         ]);
+
+        if($request->hasFile('image')){
+            $validated['image'] = $request->file('image')->store('images','public');
+        }
 
         $post = Post::create($validated);
 
@@ -60,10 +65,19 @@ class PostController extends Controller
      */
     public function update(Request $request, Post $post)
     {
+   
         $validated = $request->validate([
             'title'=>'required|string|max:255',
-            'content' => 'required|string'
+            'content' => 'required|string',
+            'image' => 'nullable|image|max:2048'
         ]);
+
+        if($request->hasFile('image')){
+            if($post->image){
+                \Storage::disk('public')->delete($post->image);
+            }
+            $validated['image'] = $request->file('image')->store('images','public');
+        }
 
         $post->update($validated);
 
@@ -76,6 +90,10 @@ class PostController extends Controller
     public function destroy(Post $post)
     {
         $post->delete();
+
+        if($post->image){
+            \Storage::disk('public')->delete($post->image);
+        }
 
         return response()->noContent();
     }
